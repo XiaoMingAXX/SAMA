@@ -1,0 +1,28 @@
+services:
+  loam-cloud:
+    build:
+      context: ..
+      dockerfile: cloud/Dockerfile
+    container_name: loam_cloud_demo
+    restart: unless-stopped
+    user: "1001:1001"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 18899
+      CLOUD_DATA_DIR: /app/cloud/data
+    ports:
+      - "18899:18899"
+      - "18880:18880"
+    volumes:
+      - ./data:/app/cloud/data
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
