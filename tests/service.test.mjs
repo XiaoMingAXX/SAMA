@@ -69,15 +69,17 @@ test('real TCP hardware mode and SSE deliver the same CRC-validated reading to t
   const aborters = [new AbortController(),new AbortController()];
   t.after(async()=>{aborters.forEach(a=>a.abort()); await runtime.close(); for(const socket of sockets) socket.destroy(); await new Promise(resolve=>bridge.close(resolve)); fs.rmSync(directory,{recursive:true,force:true});});
   await call('config',{mode:'hardware',host:'127.0.0.1',port:bridge.address().port,polling:false});
-  async function waitSample(controller) {
-    const response=await fetch(`${base}/api/events`,{signal:controller.signal}), reader=response.body.getReader(); let text='';
+  async function waitSample(response) {
+    const reader=response.body.getReader(); let text='';
     for(;;){const part=await reader.read(); if(part.done)throw new Error('SSE ended'); text+=new TextDecoder().decode(part.value); const match=text.match(/event: sample\ndata: ([^\n]+)/); if(match){const sample=JSON.parse(match[1]); await reader.cancel(); return sample;}}
   }
-  const clients=aborters.map(waitSample);
-  await new Promise(resolve=>setTimeout(resolve,50));
+  // Both subscriptions must be established before reads begin. Concurrent HTTP
+  // requests may reach the server in a different order than the input array.
+  const subscriptions=await Promise.all(aborters.map(controller=>fetch(`${base}/api/events`,{signal:controller.signal})));
+  const clients=subscriptions.map(waitSample);
   const results=await Promise.all(Array.from({length:3},()=>call('read',{})));
   const streamed=await Promise.all(clients);
-  assert.equal(streamed[0].id,streamed[1].id); assert.equal(streamed[0].id,results[0].id);
+  assert.equal(streamed[0].id,streamed[1].id); assert.ok(results.some(sample=>sample.id===streamed[0].id));
   assert.equal(streamed[0].source,'hardware'); assert.equal(streamed[0].values.moisture,16.3);
   assert.equal(maxActive,1);
 });

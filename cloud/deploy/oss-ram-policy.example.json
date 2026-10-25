@@ -1,0 +1,19 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["oss:GetObject", "oss:PutObject"],
+      "Resource": "acs:oss:*:*:YOUR_PRIVATE_BUCKET/soil-studio/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "oss:DeleteObject",
+      "Resource": [
+        "acs:oss:*:*:YOUR_PRIVATE_BUCKET/soil-studio/media/*",
+        "acs:oss:*:*:YOUR_PRIVATE_BUCKET/soil-studio/exports/*",
+        "acs:oss:*:*:YOUR_PRIVATE_BUCKET/soil-studio/preflight/*"
+      ]
+    }
+  ]
+}

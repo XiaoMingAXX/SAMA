@@ -1,0 +1,14 @@
+**/node_modules
+**/.env
+**/.env.*
+**/.secrets
+**/.preview
+**/data
+**/data-v2
+**/warehouse-data
+**/tests
+**/*.log
+artifacts
+docs
+.git
+cloud/reference

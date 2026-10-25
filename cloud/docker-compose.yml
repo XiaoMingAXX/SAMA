@@ -1,20 +1,46 @@
+name: sama-warehouse
 services:
-  loam-cloud:
+  soil-studio:
+    image: sama-warehouse:${SAMA_RELEASE_TAG:-local}
     build:
       context: ..
       dockerfile: cloud/Dockerfile
-    container_name: loam_cloud_demo
     restart: unless-stopped
     user: "1001:1001"
     environment:
       HOST: 0.0.0.0
       PORT: 18899
-      CLOUD_DATA_DIR: /app/cloud/data
+      WEB_PORT: 18880
+      NODE_ENV: production
+      CLOUD_DATA_DIR: /app/cloud/data-v2
+      SAMA_PUBLIC_ORIGIN: ${SAMA_PUBLIC_ORIGIN:?Set the independent HTTPS application origin before deployment}
+      SAMA_OBJECT_STORE: oss
+      SAMA_ALLOW_REGISTRATION: ${SAMA_ALLOW_REGISTRATION:-true}
+      OSS_BUCKET: ${OSS_BUCKET:?Set a private OSS bucket name}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-https://oss-cn-chengdu-internal.aliyuncs.com}
+      OSS_CREDENTIALS_FILE: /run/secrets/oss_credentials
+    secrets:
+      - oss_credentials
     ports:
-      - "18899:18899"
-      - "18880:18880"
+      - "127.0.0.1:18898:18899"
+      - "127.0.0.1:18890:18880"
     volumes:
-      - ./data:/app/cloud/data
+      - ${SAMA_DATA_DIR:-./warehouse-data}:/app/cloud/data-v2
+    cpus: 0.5
+    mem_limit: 384m
+    pids_limit: 64
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('node:http').get('http://127.0.0.1:18880/health',{headers:{Host:new URL(process.env.SAMA_PUBLIC_ORIGIN).host}},r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1)).setTimeout(5000,function(){this.destroy();process.exit(1)})"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    read_only: true
     tmpfs:
       - /tmp
     security_opt:
@@ -26,3 +52,6 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+secrets:
+  oss_credentials:
+    file: ${SAMA_OSS_CREDENTIALS_FILE:-./.secrets/oss-credentials.json}
